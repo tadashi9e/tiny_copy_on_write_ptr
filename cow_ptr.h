@@ -3,6 +3,7 @@
 #ifndef COW_PTR_H
 #define COW_PTR_H
 
+#include <assert.h>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -74,21 +75,41 @@ class CowPtr {
    * Shares ownership of the object managed by orig.
    */
   CowPtr<T>& operator=(const CowPtr<T>& orig) {
-    std::lock_guard<std::mutex> lock(orig.mutex_);
-    std::lock_guard<std::mutex> lock2(mutex_);
+    assert(&orig != this);
+    do {
+      if (!orig.mutex_.try_lock()) {
+        continue;
+      }
+      if (!mutex_.try_lock()) {
+        orig.mutex_.unlock();
+        continue;
+      }
+    } while (0);
     mode_ = COW_SHARED;
     ptr_ = orig.ptr_;
     orig.mode_ = COW_SHARED;
+    mutex_.unlock();
+    orig.mutex_.unlock();
     return *this;
   }
   /**
    * Move-assigns a CowPtr<T> from orig.
    */
   CowPtr<T>& operator=(CowPtr<T>&& orig) {
-    std::lock_guard<std::mutex> lock(orig.mutex_);
-    std::lock_guard<std::mutex> lock2(mutex_);
+    assert(&orig != this);
+    do {
+      if (!orig.mutex_.try_lock()) {
+        continue;
+      }
+      if (!mutex_.try_lock()) {
+        orig.mutex_.unlock();
+        continue;
+      }
+    } while (0);
     mode_ = orig.mode_;
     ptr_ = std::move(orig.ptr_);
+    mutex_.unlock();
+    orig.mutex_.unlock();
     return *this;
   }
   /**
