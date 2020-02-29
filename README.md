@@ -39,7 +39,7 @@ you can use 'operator*' and 'operator->' like a ordinary pointer.
   *p1 = "THIS IS p1";
   // read-mode access
   std::cout << *(const CowPtr<std::string>)p1 << std::endl;
-``
+```
 
 The 'operator*' and 'operator->' are write-mode access. It can cause copy.
 If you want to avoid copy-on-write, you have to use read-mode access.
